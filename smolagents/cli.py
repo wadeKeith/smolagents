@@ -105,12 +105,24 @@ def load_model(
             api_base=api_base,
         )
     elif model_type == "TransformersModel":
-        return TransformersModel(model_id=model_id, device_map="auto")
+        return TransformersModel(model_id=model_id, device_map="auto", torch_dtype='bfloat16', max_new_tokens=50000)
     elif model_type == "InferenceClientModel":
         return InferenceClientModel(
             model_id=model_id,
             token=api_key or os.getenv("HF_API_KEY"),
             provider=provider,
+            max_tokens=50000,
+        )
+    elif model_type == 'VLLMModel':
+        from smolagents import VLLMModel
+
+        return VLLMModel(
+            model_id=model_id,
+            model_kwargs={
+                "dtype": "bfloat16",
+                "gpu_memory_utilization": 0.6,
+                # "max_num_batched_tokens.": 128000,
+            },
         )
     else:
         raise ValueError(f"Unsupported model type: {model_type}")

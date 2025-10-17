@@ -124,7 +124,7 @@ def close_popups() -> str:
 from smolagents import InferenceClientModel
 
 # Initialize the model
-model_id = "Qwen/Qwen2-VL-72B-Instruct"  # You can change this to your preferred VLM model
+model_id = "Qwen/Qwen2.5-VL-72B-Instruct"  # You can change this to your preferred VLM model
 model = InferenceClientModel(model_id=model_id)
 
 # Create the agent
@@ -138,7 +138,7 @@ agent = CodeAgent(
 )
 
 # Import helium for the agent
-agent.python_executor("from helium import *", agent.state)
+agent.python_executor("from helium import *")
 
 search_request = """
 Please navigate to https://en.wikipedia.org/wiki/Chicago and give me a sentence containing the word "1992" that mentions a construction accident.
