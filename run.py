@@ -64,7 +64,13 @@ def parse_args():
         help="The API key to use for the model",
     )
     parser.add_argument(
-        "--max_steps",
+        "--code_max_steps",
+        type=int,
+        default=100,
+        help="The maximum number of steps the agent can take",
+    )
+    parser.add_argument(
+        "--tool_max_steps",
         type=int,
         default=100,
         help="The maximum number of steps the agent can take",
@@ -89,7 +95,7 @@ BROWSER_CONFIG = {
 os.makedirs(f"./{BROWSER_CONFIG['downloads_folder']}", exist_ok=True)
 
 
-def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_key=None):
+def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_key=None, code_max_steps=20, tool_max_steps=12):
     # model_params = {
     #     "model_id": model_id,
     #     "custom_role_conversions": custom_role_conversions,
@@ -116,7 +122,7 @@ def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_ke
     text_webbrowser_agent = ToolCallingAgent(
         model=model,
         tools=WEB_TOOLS,
-        max_steps=20,
+        max_steps=tool_max_steps,
         verbosity_level=2,
         planning_interval=4,
         name="search_agent",
@@ -135,7 +141,7 @@ def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_ke
     manager_agent = CodeAgent(
         model=model,
         tools=[visualizer, TextInspectorTool(model, text_limit)],
-        max_steps=12,
+        max_steps=code_max_steps,
         verbosity_level=2,
         additional_authorized_imports=["*"],
         planning_interval=4,
@@ -148,7 +154,15 @@ def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_ke
 def main():
     args = parse_args()
 
-    agent = create_agent(model_type = args.model_type, model_id=args.model_id, provider=args.provider, api_base=args.api_base, api_key=args.api_key)
+    agent = create_agent(
+        model_type=args.model_type,
+        model_id=args.model_id,
+        provider=args.provider,
+        api_base=args.api_base,
+        api_key=args.api_key,
+        code_max_steps=args.code_max_steps,
+        tool_max_steps=args.tool_max_steps,
+    )
 
     answer = agent.run(args.question)
 
