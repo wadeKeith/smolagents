@@ -120,8 +120,8 @@ def load_model(
             model_id=model_id,
             model_kwargs={
                 "dtype": "bfloat16",
+                "tensor_parallel_size": 8,
                 "gpu_memory_utilization": 0.6,
-                # "max_num_batched_tokens.": 128000,
             },
         )
     else:
