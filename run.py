@@ -24,6 +24,73 @@ from smolagents import (
     ToolCallingAgent,
 )
 from smolagents.cli import load_model
+from jinja2 import StrictUndefined, Template
+from typing import TYPE_CHECKING, Any, Literal, Type, TypeAlias, TypedDict, Union
+
+def populate_template(template: str, variables: dict[str, Any]) -> str:
+    compiled_template = Template(template, undefined=StrictUndefined)
+    try:
+        return compiled_template.render(**variables)
+    except Exception as e:
+        raise Exception(f"Error during jinja template rendering: {type(e).__name__}: {e}")
+
+company_template = """
+为求职者对“{{company_name}}”开展深入背景调查（司法管辖提示：{{jurisdiction_hint | default('CN')}}，重点关注最近 {{time_window_months | default(24)}} 个月内的重要情况，必要时保留更早的关键事件），请用 {{report_language | default('中文')}} 输出结论。
+请回答以下问题：
+1. 该品牌背后对应的法律实体有哪些？主要实体的注册地、统一社会信用代码或注册号是什么？是否存在母子公司、关联公司或同名企业导致混淆？
+2. 该公司的基础信息及经营概况如何，包括法定代表人/高管、成立时间、企业类型、主营行业和经营范围、注册地址与实际经营地、官网或常用域名、人员规模等？有什么可验证的企业亮点或风险信号？
+3. 注册资本、实缴资本（包含金额、币种、最近确认日期）以及资本变动、融资或股权结构调整情况如何？主要股东、受益所有人、董事/管理层、重要子公司或关联公司的情况如何？
+4. 在所述时间范围内，该公司是否涉及重大诉讼、仲裁、执行、行政处罚、监管调查、制裁/黑名单、产品/安全/数据隐私事件或严重负面舆情？关键事件的时间、监管/司法机关、处理状态、金额或影响如何？这些事件对求职者意味着什么？
+5. 在就业和社交平台（如脉脉、知乎、微博、Glassdoor、Indeed、Blind、Reddit 小红书 等）上，该公司被如何评价？主要讨论话题、整体情绪（正/中/负）、具有代表性的匿名观点是什么？来源链接和时间点如何？
+6. 该公司最近 {{time_window_months | default(24)}} 个月内的新闻报道和公开信息有哪些？涉及的主要事件、时间节点、来源和影响如何？这些信息对求职者意味着什么？
+7. 还有哪些尚未核实、因付费/登录/合规限制而无法获取、或值得求职者后续关注的要点？请清楚说明缺口和建议的跟进方向。
+请结合可信的公开来源，例如从：中国裁判文书网、{{company_site}}的政府公开网、全国企业信用信息公示系统来查询，并注明关键信息的出处和获取日期，给出能够帮助求职者评估入职风险与机会的洞察。
+同时，请系统梳理来自当地新闻报道、行业媒体、权威门户以及其他可靠网页的信息，综合分析该公司的业务发展、政策环境、舆情走向、竞争格局和市场定位，并指出这些信号对求职者意味着什么。
+"""
+
+DEFAULT_COMPANY_VARIABLES: dict[str, Any] = {
+    "company_name": "韶关得利包装科技有限公司",
+    "jurisdiction_hint": "CN",
+    "time_window_months": 24,
+    "report_language": "中文",
+    "company_site": "韶关市",
+}
+
+
+def build_company_request(
+    company_name: str | None = None,
+    jurisdiction_hint: str | None = None,
+    time_window_months: int | None = None,
+    report_language: str | None = None,
+    company_site: str | None = None,
+) -> str:
+    variables = DEFAULT_COMPANY_VARIABLES.copy()
+    updates = {
+        "company_name": company_name,
+        "jurisdiction_hint": jurisdiction_hint,
+        "time_window_months": time_window_months,
+        "report_language": report_language,
+        "company_site": company_site,
+    }
+    for key, value in updates.items():
+        if value is not None:
+            variables[key] = value
+    return populate_template(company_template, variables=variables)
+
+
+def resolve_task_prompt(args: argparse.Namespace) -> str:
+    if getattr(args, "question", None):
+        return args.question
+    return build_company_request(
+        company_name=getattr(args, "company_name", None),
+        jurisdiction_hint=getattr(args, "jurisdiction_hint", None),
+        time_window_months=getattr(args, "time_window_months", None),
+        report_language=getattr(args, "report_language", None),
+        company_site=getattr(args, "company_site", None),
+    )
+
+
+company_request = build_company_request()
 
 
 load_dotenv(override=True)
@@ -35,8 +102,40 @@ append_answer_lock = threading.Lock()
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--question", type=str, help="for example: 'How many studio albums did Mercedes Sosa release before 2007?'",
-        default="How many studio albums did Mercedes Sosa release before 2007?"
+        "--question",
+        type=str,
+        help="Prompt describing the company background check task for the agent.",
+        default=None,
+    )
+    parser.add_argument(
+        "--company-name",
+        type=str,
+        help="Company name to inject into the default background check template.",
+        default=None,
+    )
+    parser.add_argument(
+        "--jurisdiction-hint",
+        type=str,
+        help="Jurisdiction hint (e.g. CN, US) for the template.",
+        default=None,
+    )
+    parser.add_argument(
+        "--time-window-months",
+        type=int,
+        help="How many months of company history to review in the template.",
+        default=None,
+    )
+    parser.add_argument(
+        "--report-language",
+        type=str,
+        help="Language to request for the generated report.",
+        default=None,
+    )
+    parser.add_argument(
+        "--company-site",
+        type=str,
+        help="City or region to emphasise when looking up company information.",
+        default=None,
     )
     parser.add_argument(
         "--model-type",
@@ -60,13 +159,13 @@ def parse_args():
     parser.add_argument(
         "--api-key",
         type=str,
-        default="sk-WByFqYOyJ7daEzr081E864B7Fb4144Fb91C3038dC61aBc92",
+        default="sk-T6U5Pf6OSazCEFjqEdCa4a88E89242A898Bc453b07AeE156",
         help="The API key to use for the model",
     )
     parser.add_argument(
         "--code_max_steps",
         type=int,
-        default=100,
+        default=50,
         help="The maximum number of steps the agent can take",
     )
     parser.add_argument(
@@ -164,7 +263,8 @@ def main():
         tool_max_steps=args.tool_max_steps,
     )
 
-    answer = agent.run(args.question)
+    task_prompt = resolve_task_prompt(args)
+    answer = agent.run(task_prompt)
 
     print(f"Got this answer: {answer}")
 
