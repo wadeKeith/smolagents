@@ -2,3 +2,7 @@ nohup.out
 Qwen/
 smolagents.egg-info/
 __pycache__
+m-ric/
+sentence-transformers/
+thenlper/
+chroma_db/

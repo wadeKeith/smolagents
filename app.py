@@ -1,9 +1,4 @@
-from run import (
-    DEFAULT_COMPANY_VARIABLES,
-    build_company_request,
-    create_agent,
-    parse_args,
-)
+from run import DEFAULT_COMPANY_VARIABLES, company_template, create_agent, parse_args, populate_template
 
 import gradio as gr
 
@@ -16,8 +11,9 @@ agent = create_agent(
     provider=args.provider,
     api_base=args.api_base,
     api_key=args.api_key,
-    code_max_steps=args.code_max_steps,
-    tool_max_steps=args.tool_max_steps,
+    search_max_steps=args.search_max_steps,
+    critic_max_steps=args.critic_max_steps,
+    manage_max_steps=args.manage_max_steps,
 )
 
 initial_variables = DEFAULT_COMPANY_VARIABLES.copy()
@@ -27,6 +23,27 @@ for field in ("company_name", "jurisdiction_hint", "report_language", "company_s
         initial_variables[field] = override
 if getattr(args, "time_window_months", None) is not None:
     initial_variables["time_window_months"] = args.time_window_months
+
+
+def build_company_prompt(
+    company_name: str | None,
+    jurisdiction_hint: str | None,
+    time_window_months: int | None,
+    report_language: str | None,
+    company_site: str | None,
+) -> str:
+    variables = DEFAULT_COMPANY_VARIABLES.copy()
+    updates = {
+        "company_name": company_name,
+        "jurisdiction_hint": jurisdiction_hint,
+        "time_window_months": time_window_months,
+        "report_language": report_language,
+        "company_site": company_site,
+    }
+    for key, value in updates.items():
+        if value is not None:
+            variables[key] = value
+    return populate_template(company_template, variables=variables)
 
 
 def _sanitize_text(value: str | None) -> str | None:
@@ -45,7 +62,7 @@ def run_background_check(company_name, jurisdiction_hint, time_window_months, re
         except ValueError:
             raise gr.Error("time_window_months 需要为数字")
 
-    prompt = build_company_request(
+    prompt = build_company_prompt(
         company_name=_sanitize_text(company_name),
         jurisdiction_hint=_sanitize_text(jurisdiction_hint),
         time_window_months=months,

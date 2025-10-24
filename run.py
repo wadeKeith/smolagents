@@ -35,59 +35,36 @@ def populate_template(template: str, variables: dict[str, Any]) -> str:
         raise Exception(f"Error during jinja template rendering: {type(e).__name__}: {e}")
 
 company_template = """
-请按照资深背调专家的流程，为企业合作风控与尽调目的，对“{{company_name}}”执行结构化背景调查（司法管辖提示：{{jurisdiction_hint | default('CN')}}，重点覆盖最近 {{time_window_months | default(24)}} 个月的重要动态，并回溯能改变结论的历史事件），以 {{report_language | default('中文')}} 输出。
+请以公开渠道与主流媒体为核心，为“{{company_name}}”撰写企业背景调查报告（司法管辖提示：{{jurisdiction_hint | default('CN')}}，重点关注最近 {{time_window_months | default(24)}} 个月内的动态，并补充更早但仍影响判断的事件），使用 {{report_language | default('中文')}} 输出。
 
-交付格式与要点如下：
-一、任务设定与范围边界
-- 说明此次调查的目标（合作/投资/供应链控制等）与深度，列出覆盖的主题与排除项，确认主要法律实体及可访问的数据地域（含 {{company_site}} 重点渠道）。
+交付结构
+一、任务概述与信息范围
+- 说明本次调研目标、重点问题、覆盖地域与排除项，列出关注的核心法人实体、品牌或业务条线。
 
-二、信息来源与取证记录
-- 按来源类型列出已访问渠道、数据库与检索方法并标注时间（UTC+8）；如有受限或需付费渠道请单独备注。
-- 重点覆盖：公司官网与公告（含上市公司年报）；工商注册与监管披露平台（如 ACRA、新加坡企业管制局、国家企业信用信息公示系统、香港公司注册处、SEC EDGAR、CSRC 公告、SGX 公告）；法律与诉讼数据库（中国裁判文书网、PACER、LawNet、地方法院公告、执行信息公开网）；行业监管或专项合规平台（生态环境部、安全生产或 OSHA、税务与环保公开信息）；信用评级与商业数据服务（Dun & Bradstreet、Experian、Credit Bureau Singapore 等）；商标与专利数据库（WIPO PatentScope、各国知识产权局）；主流与行业媒体；行业/市场研究与协会网站（麦肯锡、行业协会、BBB、全国工商联等）；公共统计库（国家统计局、世行、IMF、UN Global Compact、ITC TradeMap）；供应链与贸易数据（海关、船运记录、贸易数据库）；行业会议与专家访谈线索；学术研究平台（Google Scholar、ResearchGate、大学图书馆案例库）；社交与职业平台（LinkedIn、Glassdoor 等）；消费者投诉与地方政府公开渠道（CASE、中国消协、地方经发局、补贴或处罚公告）。
+二、信息来源总览
+- 汇总已检索与计划检索的公开渠道，至少涵盖：公司官网与公告、当地政府及监管数据库（工商、证监、交易所、税务、环保、安全生产等）、主流与行业媒体、地方新闻站点、权威商业资讯平台、法院及执行公告、知识产权/商标专利库、信用评级或商业数据服务、社交媒体与口碑平台、消费者投诉网站。为每条来源记录：渠道名称、访问链接或检索方式、最新抓取时间、可获取内容类型（新闻/公告/数据等）、访问限制（公开/付费/需登陆）。
 
-三、企业概况与里程碑
-- 汇总法律实体、统一社会信用代码或注册号、成立/变更时间、企业类型、核心业务线、总部与运营地点、重要历史事件，并提示可能的同名或关联混淆。
+三、企业概况速览
+- 概述企业历史沿革、核心业务与产品组合、主营市场、管理层及股权结构要点，引用官方或权威公开资料。若存在同名公司或关联主体，需标注差异。
 
-四、组织治理与高管背景
-- 梳理控股股东、受益所有人、董事会成员及核心高管，概述其教育/履历/行业声誉；如有司法或合规记录需点明来源与影响。
+四、近期战略重点
+- 结合官网动态、官方公告、主流媒体与地方媒体报道，总结企业在 {{time_window_months | default(24)}} 个月内的主要动作（如产线扩张、市场进入、合作伙伴、技术发布、投融资等），并指出报道来源、发布时间及其对业务的潜在影响。
 
-五、股权结构与资本安排
-- 展示最新股权结构、注册资本与实缴情况（注明币种与确认时间）、主要子公司/分支、资本增减或股东变更时间线，分析出资真实性与潜在控制关系。
+五、合规与监管动向
+- 汇总监管公告、政府公示、司法或行政处罚、环保/安全检查、税务信息等公开记录；说明事件时间、主管机构、处理状态与对企业运营或外部合作的影响。
 
-六、业务版图与市场定位
-- 描述主营产品/服务、目标客户群、收入或订单结构、关键合作伙伴、地域覆盖，评估与工商登记经营范围的一致性，分析竞争对手与行业位置。
-- 结合行业报告、市场研究、公共统计数据（国家统计局、世行、IMF 等）以及供应链/贸易数据库（如海关或船运记录）验证业务规模、上下游关系和跨境交易情况。
+六、企业舆情雷达
+- 采集主流媒体、地方新闻门户、行业评论、社交/视频平台（微博、微信公号、抖音、B 站、知乎、Glassdoor 等）以及消费者投诉渠道对企业的讨论热度、情绪倾向、核心议题与关键词演变；区分官方声明、第三方报道与匿名信息，标注发布时间、传播渠道、互动量或传播级别（如阅读量/转发/点赞）。
+- 对重大舆情事件提供时间轴，说明事件触发点、企业回应、外部反馈与当前状态；如存在谣言或未经证实的消息，要指出核实状态与建议的监测动作。
 
-七、财务健康度分析
-- 汇总官方财务报表、监管披露文件、信用评级和商业数据平台信息，分析盈利能力、现金流、偿债能力等指标。
-- 无法获取完整数据时说明缺口并推断合理性，指出潜在财务风险信号或需要第三方验证的重点。
+七、风险与机会评估
+- 基于上述信息，对企业近期的核心风险点（如经营、合规、声誉、财务）与亮点机会逐项分析；说明来源支持、影响程度（【高】/【中】/【低】）以及可能的后续观察指标。
 
-八、合规、法律与监管风险
-- 按时间顺序列出诉讼/仲裁/执行、行政处罚、监管调查、制裁或黑名单、数据与隐私事件，说明主管机关、金额或影响、当前状态及对合作方的意义。
-- 特别关注税务、环保（生态环境部、地方环保局、OSHA 等安全监管）及劳动监管部门的公告，以及法院裁判文书与执行信息公开网，区分已结案与在办事项并评估整改或追偿进展。
+八、信息缺口与后续建议
+- 指出尚未获取但对判断关键的资料，说明原因（如付费、权限限制、需访谈），并建议下一步验证路径或需要关注的渠道。
 
-九、媒体舆情与公众反馈
-- 汇总传统媒体、行业报告及社交平台（知乎、微博、Glassdoor、Reddit、小红书等）的主要话题、情绪取向、代表性观点，区分未经证实的传言与可核实事实。
-- 纳入消费者保护协会、投诉平台与评分网站的反馈，并记录企业官方回应或整改情况。
-
-十、第三方验证与访谈线索
-- 若存在来自前员工、供应商、客户或专业调查机构的公开信息，提炼核心结论；若缺失，提出建议的访谈对象与验证方法。
-- 收录行业会议、专家访谈、专业协会或学术研究的关键观点，并说明可信度与适用性。
-
-十一、交叉验证与风险评级
-- 说明关键信息的交叉验证情况，对矛盾数据给出解释或进一步验证建议；从财务、市场、合规、法律、声誉等维度给出风险等级（【高】/【中】/【低】）及依据。
-
-十二、持续跟踪计划
-- 建议后续应持续监测的指标、渠道或触发条件（如公告、监管更新、媒体监控节奏），提出复查频率与责任建议。
-
-十三、结论与行动建议
-- 用 3-6 条结论归纳公司整体状况与关键风险机会，明确对合作/投资/供应链决策的影响，并提出可执行的下一步动作。
-
-附录要求：
-- 全文严格引用可信来源，对每条事实列明出处与检索日期；若来源可信度有限或需二次核实，请显著标注。
-- 保持信息逻辑清晰，避免“搜到即列”，对重要程度高的信息给予更高权重与解释。
-- 报告末尾提供“资料清单”，列出所有引用的来源名称、链接或访问路径、检索时间及可复核性说明。
-- 在调查过程中须遵守当地法律与隐私合规要求，如有潜在限制需在报告中提示。
+附录：资料清单
+- 按引用顺序列出所有来源（名称、URL/访问路径、发布日期或检索日期、来源类型、可信度评估）。如引用二手渠道或推断，请明确标注并说明依据。
 """
 
 DEFAULT_COMPANY_VARIABLES: dict[str, Any] = {
@@ -97,42 +74,22 @@ DEFAULT_COMPANY_VARIABLES: dict[str, Any] = {
     "report_language": "中文",
     "company_site": "韶关市",
 }
+    
 
 
-def build_company_request(
-    company_name: str | None = None,
-    jurisdiction_hint: str | None = None,
-    time_window_months: int | None = None,
-    report_language: str | None = None,
-    company_site: str | None = None,
-) -> str:
+def resolve_task_prompt(args: argparse.Namespace) -> str:
     variables = DEFAULT_COMPANY_VARIABLES.copy()
     updates = {
-        "company_name": company_name,
-        "jurisdiction_hint": jurisdiction_hint,
-        "time_window_months": time_window_months,
-        "report_language": report_language,
-        "company_site": company_site,
+        "company_name": getattr(args, "company_name", None),
+        "jurisdiction_hint": getattr(args, "jurisdiction_hint", None),
+        "time_window_months": getattr(args, "time_window_months", None),
+        "report_language": getattr(args, "report_language", None),
+        "company_site": getattr(args, "company_site", None),
     }
     for key, value in updates.items():
         if value is not None:
             variables[key] = value
     return populate_template(company_template, variables=variables)
-
-
-def resolve_task_prompt(args: argparse.Namespace) -> str:
-    if getattr(args, "question", None):
-        return args.question
-    return build_company_request(
-        company_name=getattr(args, "company_name", None),
-        jurisdiction_hint=getattr(args, "jurisdiction_hint", None),
-        time_window_months=getattr(args, "time_window_months", None),
-        report_language=getattr(args, "report_language", None),
-        company_site=getattr(args, "company_site", None),
-    )
-
-
-company_request = build_company_request()
 
 
 load_dotenv(override=True)
@@ -144,34 +101,28 @@ append_answer_lock = threading.Lock()
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--question",
-        type=str,
-        help="Prompt describing the company background check task for the agent.",
-        default=None,
-    )
-    parser.add_argument(
         "--company-name",
         type=str,
         help="Company name to inject into the default background check template.",
-        default=None,
+        default="无锡三代科技有限公司",
     )
     parser.add_argument(
         "--jurisdiction-hint",
         type=str,
         help="Jurisdiction hint (e.g. CN, US) for the template.",
-        default=None,
+        default="CN",
     )
     parser.add_argument(
         "--time-window-months",
         type=int,
         help="How many months of company history to review in the template.",
-        default=None,
+        default=24,
     )
     parser.add_argument(
         "--report-language",
         type=str,
         help="Language to request for the generated report.",
-        default=None,
+        default="Chinese",
     )
     parser.add_argument(
         "--company-site",
@@ -205,13 +156,19 @@ def parse_args():
         help="The API key to use for the model",
     )
     parser.add_argument(
-        "--code_max_steps",
+        "--search_max_steps",
         type=int,
         default=50,
         help="The maximum number of steps the agent can take",
     )
     parser.add_argument(
-        "--tool_max_steps",
+        "--critic_max_steps",
+        type=int,
+        default=50,
+        help="The maximum number of steps the agent can take",
+    )
+    parser.add_argument(
+        "--manage_max_steps",
         type=int,
         default=100,
         help="The maximum number of steps the agent can take",
@@ -236,15 +193,7 @@ BROWSER_CONFIG = {
 os.makedirs(f"./{BROWSER_CONFIG['downloads_folder']}", exist_ok=True)
 
 
-def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_key=None, code_max_steps=20, tool_max_steps=12):
-    # model_params = {
-    #     "model_id": model_id,
-    #     "custom_role_conversions": custom_role_conversions,
-    #     "max_completion_tokens": 8192,
-    # }
-    # if model_id == "o1":
-    #     model_params["reasoning_effort"] = "high"
-    # model = LiteLLMModel(**model_params)
+def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_key=None, search_max_steps=20, critic_max_steps=20, manage_max_steps=12):
 
     model = load_model(model_type, model_id, provider=provider, api_base=api_base, api_key=api_key)
 
@@ -260,10 +209,18 @@ def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_ke
         ArchiveSearchTool(browser),
         TextInspectorTool(model, text_limit),
     ]
+    search_agent_instructions = """你是负责公开资料搜集与证据整理的分析员。每次接到 manager_agent 的子任务时：
+- 先写下检索计划（目标主题、优先渠道、关键词/时间窗口），再执行工具调用。
+- 重点检索公司官网公告、政府/监管数据库、本地与主流媒体报道、行业资讯站、法院与执行公告、知识产权/商标专利库、信用与商业数据库、社交/口碑平台、短视频与论坛，以及地方新闻和政策发布，尤其关注企业舆情相关的热词、事件与互动数据。
+- 每条发现需包含：事实摘要、原始来源链接、发布日期或抓取时间、来源类型（官网/监管/主流媒体/地方媒体/社交/投诉等）、可信度判断，以及对应到 company_template 的章节。
+- 对同名企业或未经核实的线索要显著标注，并提出仍需验证的内容、可能的补充渠道或采访对象；针对舆情事件要说明传播范围、企业回应与后续状态。
+- 在 run summary 中说明已覆盖的章节、关键结论、舆情信号、未解问题与下一步计划。
+- 收到 critic_agent 的反馈后必须逐条回应：写明已采取的补救措施、仍受限的原因及替代方案。
+- 禁止编造或臆测，如信息缺失需说明限制并建议线下或高权限取证路径。"""
     text_webbrowser_agent = ToolCallingAgent(
         model=model,
         tools=WEB_TOOLS,
-        max_steps=tool_max_steps,
+        max_steps=manage_max_steps,
         verbosity_level=2,
         planning_interval=4,
         name="search_agent",
@@ -273,20 +230,56 @@ def create_agent(model_type, model_id="o1", provider=None, api_base=None, api_ke
     And don't hesitate to provide him with a complex search task, like finding a difference between two webpages.
     Your request must be a real sentence, not a google search! Like "Find me this information (...)" rather than a few keywords.
     """,
+        instructions=search_agent_instructions,
         provide_run_summary=True,
     )
     text_webbrowser_agent.prompt_templates["managed_agent"]["task"] += """You can navigate to .txt online files.
     If a non-html page is in another format, especially .pdf or a Youtube video, use tool 'inspect_file_as_text' to inspect it.
-    Additionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information."""
+    Additionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information.
+    阶段性检索完成后，请先用自然语言总结主要发现、来源分布与缺口，再调用 final_answer，以便 critic_agent 评估；总结中需回应上一轮 critic_agent 的逐条建议。"""
+
+    critic_agent_instructions = """你是公开信息尽调的质量评审员，需判断现有材料能否支持对企业近期重点与舆情态势的准确总结。
+每轮评审时：
+- 覆盖度：逐条比对 company_template 章节，确认官网/监管公告、主流媒体、地方媒体及社交/投诉渠道是否都有涉猎，尤其评估“企业舆情雷达”部分是否提供事件时间轴、情绪分析与企业回应。
+- 可信度：检查引用是否来自权威公开渠道，链接是否有效，是否存在同名实体混淆或未经证实的传闻。
+- 时效性：核对信息是否落在要求的时间窗口内，对过时或无日期的线索给出处理建议。
+- 汇总性：评估 search_agent 的总结是否提炼出“近期战略重点”“监管热点”“舆情焦点”等关键信息，并指出影响权重。
+输出结构化评价：
+1. 总体评级（高/中/低）与一句话理由；
+2. 已满足的亮点（≤3 条）；
+3. 主要缺口或风险点（逐条写影响与建议行动）；
+4. 建议直接交给 search_agent 的后续检索或验证指令列表；
+5. 需要 manager_agent 提供的额外上下文（如有）。
+仅基于提交材料做判断，不得凭空推断。"""
+    critic_agent = ToolCallingAgent(
+        model=model,
+        tools=[],
+        max_steps=critic_max_steps,
+        verbosity_level=2,
+        planning_interval=4,
+        name="critic_agent",
+        description="评估 search_agent 阶段性输出的覆盖度、可信度与下一步检索建议的评论员。",
+        instructions=critic_agent_instructions,
+    )
+
+    manager_instructions = """你是企业背景调查的项目统筹，目标是基于公开渠道、主流/地方媒体与线上舆情数据，完成 company_template 所需的最新洞察。
+工作流程：
+1. 解读初始任务，拆分为若干阶段目标（如信息来源梳理、战略重点梳理、监管舆情跟踪、舆情热度分析），明确告诉 search_agent 需覆盖的来源类型与时间窗口。
+2. 在每个重要阶段结束后，把 search_agent 的阶段总结提交给 critic_agent，请其评估覆盖度与提炼质量；随后将关键反馈转述给 search_agent，要求其逐条回应并更新检索计划。
+3. 维护任务看板，实时记录已完成章节、缺失信息、阻塞原因以及下一步行动，必要时调整优先级或向用户请求额外上下文。
+4. 仅当 critic_agent 给出“中”及以上评级，且高优先级缺口（尤其是舆情雷达中的关键事件）都有来源支持或合理解释时，才进入归纳输出阶段；否则继续组织补充检索。
+5. 生成最终报告时，确保聚焦近期战略重点、监管/合规动态、舆情热度及声誉风险评估，并在附录中列出完整的资料清单与舆情监测建议。
+保持指令清晰可执行，避免冗长描述，确保多轮协作高效闭环。"""
 
     manager_agent = CodeAgent(
         model=model,
         tools=[visualizer, TextInspectorTool(model, text_limit)],
-        max_steps=code_max_steps,
+        max_steps=search_max_steps,
         verbosity_level=2,
         additional_authorized_imports=["*"],
         planning_interval=4,
-        managed_agents=[text_webbrowser_agent],
+        instructions=manager_instructions,
+        managed_agents=[text_webbrowser_agent, critic_agent],
     )
 
     return manager_agent
@@ -301,8 +294,9 @@ def main():
         provider=args.provider,
         api_base=args.api_base,
         api_key=args.api_key,
-        code_max_steps=args.code_max_steps,
-        tool_max_steps=args.tool_max_steps,
+        search_max_steps=args.search_max_steps,
+        critic_max_steps = args.critic_max_steps,
+        manage_max_steps=args.manage_max_steps,
     )
 
     task_prompt = resolve_task_prompt(args)
