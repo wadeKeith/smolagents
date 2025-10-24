@@ -1,9 +1,17 @@
-from run import DEFAULT_COMPANY_VARIABLES, company_template, create_agent, parse_args, populate_template
+from run import build_company_prompt, build_company_variables, create_agent, parse_args
 
 import gradio as gr
 
 
 args = parse_args()
+
+company_context = build_company_variables(
+    company_name=args.company_name,
+    jurisdiction_hint=args.jurisdiction_hint,
+    time_window_months=args.time_window_months,
+    report_language=args.report_language,
+    company_site=args.company_site,
+)
 
 agent = create_agent(
     model_type=args.model_type,
@@ -14,36 +22,10 @@ agent = create_agent(
     search_max_steps=args.search_max_steps,
     critic_max_steps=args.critic_max_steps,
     manage_max_steps=args.manage_max_steps,
+    company_context=company_context,
 )
 
-initial_variables = DEFAULT_COMPANY_VARIABLES.copy()
-for field in ("company_name", "jurisdiction_hint", "report_language", "company_site"):
-    override = getattr(args, field, None)
-    if override is not None:
-        initial_variables[field] = override
-if getattr(args, "time_window_months", None) is not None:
-    initial_variables["time_window_months"] = args.time_window_months
-
-
-def build_company_prompt(
-    company_name: str | None,
-    jurisdiction_hint: str | None,
-    time_window_months: int | None,
-    report_language: str | None,
-    company_site: str | None,
-) -> str:
-    variables = DEFAULT_COMPANY_VARIABLES.copy()
-    updates = {
-        "company_name": company_name,
-        "jurisdiction_hint": jurisdiction_hint,
-        "time_window_months": time_window_months,
-        "report_language": report_language,
-        "company_site": company_site,
-    }
-    for key, value in updates.items():
-        if value is not None:
-            variables[key] = value
-    return populate_template(company_template, variables=variables)
+initial_variables = company_context.copy()
 
 
 def _sanitize_text(value: str | None) -> str | None:
@@ -62,13 +44,17 @@ def run_background_check(company_name, jurisdiction_hint, time_window_months, re
         except ValueError:
             raise gr.Error("time_window_months 需要为数字")
 
-    prompt = build_company_prompt(
+    updated_variables = build_company_variables(
         company_name=_sanitize_text(company_name),
         jurisdiction_hint=_sanitize_text(jurisdiction_hint),
         time_window_months=months,
         report_language=_sanitize_text(report_language),
         company_site=_sanitize_text(company_site),
     )
+    company_context.clear()
+    company_context.update(updated_variables)
+
+    prompt = build_company_prompt(company_context)
     answer = agent.run(prompt)
     return prompt, answer
 
@@ -99,9 +85,9 @@ with gr.Blocks(title="企业背景调查助手", theme="ocean") as demo:
                 placeholder="生成报告的语言，例如 中文",
             )
             company_site = gr.Textbox(
-                label="企业所在地或重点关注区域",
-                value=initial_variables["company_site"],
-                placeholder="企业所在地或重点关注区域",
+                label="重点关注城市/区域",
+                value=initial_variables.get("company_site", ""),
+                placeholder="例如 上海、深圳，或留空",
             )
             submit = gr.Button("生成调查报告", variant="primary")
 

@@ -5,4 +5,5 @@ __pycache__
 m-ric/
 sentence-transformers/
 thenlper/
-chroma_db/
+rag_corpus/
+rag_vector_db/
