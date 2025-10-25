@@ -1,11 +1,5 @@
 nohup.out
-Qwen/
 smolagents.egg-info/
 __pycache__
-m-ric/
 sentence-transformers/
-thenlper/
-rag_corpus/
-rag_vector_db/
-openai/
-rag_playbooks/
+

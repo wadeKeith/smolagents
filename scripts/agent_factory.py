@@ -18,6 +18,7 @@ from scripts.text_web_browser import (
 )
 from scripts.visual_qa import visualizer
 from smolagents import CodeAgent, GoogleSearchTool, OpenAIServerModel, ToolCallingAgent
+from smolagents.cli import load_model
 from smolagents.models import MessageRole
 
 USER_AGENT = (
@@ -64,11 +65,6 @@ def _build_remote_model(
 
 
 def create_agent(
-    model_type,
-    model_id="o1",
-    provider=None,
-    api_base=None,
-    api_key=None,
     search_max_steps=20,
     critic_max_steps=20,
     manage_max_steps=12,
@@ -84,24 +80,37 @@ def create_agent(
         api_base_envs=["MANAGER_API_BASE", "OPENAI_API_BASE"],
         default_api_base="https://aihubmix.com/v1",
     )
+    if manager_model is None:
+        raise ValueError(
+            "无法初始化 manager 模型：请设置 MANAGER_API_KEY/OPENAI_API_KEY，或通过 CLI 提供可用的 model_type/model_id。"
+        )
+
     search_model = _build_remote_model(
-        model_id=os.getenv("SEARCH_MODEL_ID", "qwen3-max"),
+        model_id=os.getenv("SEARCH_MODEL_ID", "gemini-2.5-flash"),
         api_key_envs=["SEARCH_API_KEY", "OPENAI_API_KEY"],
         api_base_envs=["SEARCH_API_BASE", "OPENAI_API_BASE"],
         default_api_base="https://aihubmix.com/v1",
     )
+    if search_model is None:
+        search_model = manager_model
+
     critic_model = _build_remote_model(
         model_id=os.getenv("CRITIC_MODEL_ID", "claude-haiku-4-5"),
         api_key_envs=["CRITIC_API_KEY", "FIREWORKS_API_KEY", "OPENAI_API_KEY"],
         api_base_envs=["CRITIC_API_BASE", "FIREWORKS_API_BASE", "OPENAI_API_BASE"],
         default_api_base="https://aihubmix.com/v1",
     )
+    if critic_model is None:
+        critic_model = manager_model
+
     curator_model = _build_remote_model(
-        model_id=os.getenv("CURATOR_MODEL_ID", "glm-4.6"),
+        model_id=os.getenv("CURATOR_MODEL_ID", "gpt-4o-mini"),
         api_key_envs=["CURATOR_API_KEY", "OPENAI_API_KEY"],
         api_base_envs=["CURATOR_API_BASE", "OPENAI_API_BASE"],
         default_api_base="https://aihubmix.com/v1",
     )
+    if curator_model is None:
+        curator_model = manager_model
     rag_curator = RAGCurator(curator_model)
     location_hint_fallback = context.get("company_site") or "目标地区"
 
@@ -176,6 +185,44 @@ def create_agent(
     class CachingGoogleSearchTool(GoogleSearchTool):
         def forward(self, query: str, filter_year: int | None = None) -> str:  # type: ignore[override]
             import requests
+            if not self.api_key:
+                try:
+                    from ddgs import DDGS
+
+                    ddgs = DDGS()
+                    results = list(ddgs.text(query, max_results=10))
+                except Exception as exc:  # pragma: no cover - fallback path
+                    raise ValueError(f"搜索失败：{exc}") from exc
+                if not results:
+                    return f"No results found for '{query}'."
+                formatted_lines = ["## Search Results"]
+                distilled_entries = []
+                seen_links: set[str] = set()
+                for idx, page in enumerate(results):
+                    title = page.get("title", "")
+                    link = page.get("href", "")
+                    snippet = page.get("body", "")
+                    if link in seen_links:
+                        continue
+                    seen_links.add(link)
+                    formatted_lines.append(f"{idx}. [{title}]({link})\n{snippet}")
+                    distilled_entries.append(
+                        "\n".join(
+                            [
+                                f"标题: {title}",
+                                f"链接: {link}",
+                                f"摘要: {snippet or '（无摘要）'}",
+                            ]
+                        )
+                    )
+                company_name = resolve_company_name()
+                if distilled_entries and company_name:
+                    ingest_text_if_possible(
+                        "\n\n".join(distilled_entries),
+                        source="google_search",
+                        category="search_results",
+                    )
+                return "\n\n".join(formatted_lines)
 
             if self.provider == "serpapi":
                 params = {

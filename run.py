@@ -121,31 +121,6 @@ def parse_args():
         default=None,
     )
     parser.add_argument(
-        "--model-type",
-        type=str,
-        default="OpenAIServerModel",
-        help="The model type to use (e.g., OpenAIServerModel, LiteLLMModel, TransformersModel, InferenceClientModel, VLLMModel)",
-    )
-    parser.add_argument("--model-id", type=str, default="claude-haiku-4-5")
-    parser.add_argument(
-        "--provider",
-        type=str,
-        # default='novita',
-        help="The inference provider to use for the model",
-    )
-    parser.add_argument(
-        "--api-base",
-        type=str,
-        default="https://aihubmix.com/v1",
-        help="The API base to use for the model",
-    )
-    parser.add_argument(
-        "--api-key",
-        type=str,
-        default="sk-T6U5Pf6OSazCEFjqEdCa4a88E89242A898Bc453b07AeE156",
-        help="The API key to use for the model",
-    )
-    parser.add_argument(
         "--search_max_steps",
         type=int,
         default=50,
@@ -178,11 +153,6 @@ def main():
     )
 
     agent = create_agent(
-        model_type=args.model_type,
-        model_id=args.model_id,
-        provider=args.provider,
-        api_base=args.api_base,
-        api_key=args.api_key,
         search_max_steps=args.search_max_steps,
         critic_max_steps=args.critic_max_steps,
         manage_max_steps=args.manage_max_steps,

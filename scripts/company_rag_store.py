@@ -31,9 +31,11 @@ class CompanyRAGStore:
         self.persist_directory = Path(persist_directory)
         self.corpus_directory = Path(corpus_directory)
         self.playbook_directory = Path(playbook_directory)
+        self.playbook_archive_directory = self.playbook_directory / "archive"
         self.persist_directory.mkdir(parents=True, exist_ok=True)
         self.corpus_directory.mkdir(parents=True, exist_ok=True)
         self.playbook_directory.mkdir(parents=True, exist_ok=True)
+        self.playbook_archive_directory.mkdir(parents=True, exist_ok=True)
         self.max_raw_files = max_raw_files
 
         self._client = chromadb.PersistentClient(path=str(self.persist_directory))
@@ -169,6 +171,8 @@ class CompanyRAGStore:
 
         path = self._playbook_path(company_name)
         existing = self.get_playbook(company_name)
+        if existing:
+            self._archive_playbook(path, existing)
         updated = curator.update_playbook(
             company_name=company_name,
             location_hint=location_hint,
@@ -196,3 +200,11 @@ class CompanyRAGStore:
                 obsolete.unlink()
             except OSError:
                 continue
+
+    def _archive_playbook(self, path: Path, content: str) -> None:
+        slug = path.stem
+        archive_dir = self.playbook_archive_directory / slug
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = time.strftime("%Y%m%d%H%M%S")
+        archive_path = archive_dir / f"{timestamp}.md"
+        archive_path.write_text(content, encoding="utf-8")

@@ -39,11 +39,6 @@ def run_background_check(company_name, jurisdiction_hint, time_window_months, re
     )
     prompt = build_company_prompt(updated_variables)
     agent = create_agent(
-        model_type=args.model_type,
-        model_id=args.model_id,
-        provider=args.provider,
-        api_base=args.api_base,
-        api_key=args.api_key,
         search_max_steps=args.search_max_steps,
         critic_max_steps=args.critic_max_steps,
         manage_max_steps=args.manage_max_steps,
