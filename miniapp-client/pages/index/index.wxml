@@ -1,15 +1,20 @@
 <view class="page">
-  <view class="hero card">
+  <view class="hero card glass">
+    <view class="hero-pill">RAG × Agent Orchestration</view>
     <view class="hero-title">企业尽调智能体 · 小程序端</view>
-    <view class="hero-desc">选择套餐 → 填写企业信息 → 一键生成背调订单。</view>
+    <view class="hero-desc">秒级提交企业信息，后台自动完成检索、整理、写报告。</view>
+    <view class="hero-tech">
+      <text wx:for="{{techHighlights}}" wx:key="index" class="hero-tech-item">• {{item}}</text>
+    </view>
     <view class="hero-base">当前后端：{{baseUrl}}</view>
   </view>
 
-  <view class="section card">
-    <view class="section-title">套餐选择</view>
+  <view class="section card translucent">
+    <view class="section-title">套餐与智能体能力</view>
     <view class="plan-list">
       <block wx:for="{{plans}}" wx:key="id">
         <view class="plan-item {{selectedPlan === item.id ? 'active' : ''}}" bindtap="handlePlanTap" data-plan-id="{{item.id}}">
+          <view class="plan-pill">自研 Agent Stack</view>
           <view class="plan-header">
             <text class="plan-name">{{item.name}}</text>
             <text class="plan-price">¥{{item.price_cny}}</text>
@@ -23,21 +28,7 @@
     </view>
   </view>
 
-  <view class="section card">
-    <view class="section-title">附加项</view>
-    <checkbox-group class="addon-list" bindchange="handleAddonChange">
-      <label wx:for="{{addOns}}" wx:key="id" class="addon-item">
-        <checkbox value="{{item.id}}" checked="{{selectedAddOns.indexOf(item.id) > -1}}" />
-        <view class="addon-desc">
-          <view class="addon-name">{{item.name}}</view>
-          <view class="addon-text">¥{{item.price_cny}} · {{item.description}}</view>
-        </view>
-      </label>
-    </checkbox-group>
-    <view class="addon-empty" wx:if="{{!addOns.length}}">暂无附加项，稍后再试。</view>
-  </view>
-
-  <view class="section card">
+  <view class="section card solid">
     <view class="section-title">企业信息</view>
     <form bindsubmit="handleSubmit" report-submit="true">
       <view class="form-item">
@@ -62,12 +53,6 @@
         <text>时间窗口</text>
         <picker mode="selector" range="{{timeWindowOptions}}" value="{{timeWindowIndex}}" bindchange="handleWindowChange">
           <view class="picker-value">过去 {{form.time_window_months}} 个月</view>
-        </picker>
-      </view>
-      <view class="form-item" wx:if="{{selectedAddOns.indexOf('custom_recency') > -1}}">
-        <text>自定义时效 (需购附加项)</text>
-        <picker mode="selector" range="{{customWindowOptions}}" value="{{customWindowIndex}}" bindchange="handleCustomWindowChange">
-          <view class="picker-value">{{customWindowValue}} 个月</view>
         </picker>
       </view>
       <view class="pricing-summary">

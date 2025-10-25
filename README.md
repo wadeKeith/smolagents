@@ -185,14 +185,11 @@ python scripts/curation_monitor.py --window-hours 24
 - 关键接口：
   | Method | Path | 说明 |
   | --- | --- | --- |
-  | `GET` | `/wechat/pricing` | 返回套餐与附加项，用于前端渲染价格卡片。 |
+| `GET` | `/wechat/pricing` | 返回套餐（当前为单次尽调），用于前端渲染价格卡片。 |
   | `POST` | `/wechat/login` | 代理 `wx.login` code → openid。测试模式下本地生成。 |
-  | `POST` | `/wechat/orders` | 创建背调订单，校验套餐/附加项并异步触发 agent。 |
+| `POST` | `/wechat/orders` | 创建背调订单，校验套餐并异步触发 agent。 |
   | `GET` | `/wechat/orders/{order_id}` | 轮询订单状态，返回 prompt/answer/error。 |
-- 计费策略：
-  - 标准版 ¥99：24 个月公开信息 + Playbook 快照。
-  - 深度版 ¥199：多轮主题分析 + 归档与 RAG 导出。
-  - 专业版 ¥299：定制检索关键词、批量导出、API 回调。
-  - 附加项：Playbook 归档导出 +¥20；自定义时效（12/36 个月）+¥30；人工复核 +¥100。
+- 计费策略（微信端）：
+  - 单次尽调 ¥25：24 个月公开渠道扫描 + Playbook 即时更新。
 
-微信小程序端只需按上述接口提交公司信息、套餐及附加项选择，即可获取实时价格与订单状态。
+微信小程序端只需按上述接口提交公司信息和套餐选择，即可获取实时价格与订单状态。

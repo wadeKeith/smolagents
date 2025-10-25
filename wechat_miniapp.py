@@ -2,21 +2,14 @@
 
 This FastAPI service exposes a small surface area tailored for mini-programs:
 
-1. `/wechat/pricing`      – transparent plan/add-on catalog consumed by UI.
+1. `/wechat/pricing`      – transparent plan catalog consumed by UI.
 2. `/wechat/login`        – thin proxy for `jscode2session` (with local test fallback).
 3. `/wechat/orders`       – create a background-check order, computes fees, runs agent.
 4. `/wechat/orders/{id}`  – poll order status, retrieve prompt & completion.
 
 Pricing follows the brief:
 
-Standard  ¥99  – 24M public data + Playbook snapshot.
-Deep      ¥199 – multi-turn themes + archive & RAG export.
-Pro       ¥299 – custom keywords, batch export, async callbacks.
-
-Optional add-ons:
-Playbook export (PDF/JSON) +¥20
-Custom recency (12/36M)    +¥30
-Human review option        +¥100
+Single run ¥25 – 24 个月公开数据扫描 + Playbook 快照。
 
 Run locally:
     uvicorn wechat_miniapp:app --host 0.0.0.0 --port 8080
@@ -49,53 +42,15 @@ from scripts.agent_factory import create_agent
 
 PRICING_PLANS: Dict[str, Dict[str, Any]] = {
     "standard": {
-        "name": "标准版",
-        "price_cny": 99,
-        "tagline": "24 个月公开信息 + Playbook 更新",
+        "name": "单次尽调",
+        "price_cny": 25,
+        "tagline": "固定 ¥25，一次完成 24 个月尽调",
         "features": [
             "24 个月公开渠道扫描",
             "公司概况 / 合规风险 / 舆情雷达",
             "Playbook 实时快照",
         ],
-    },
-    "deep": {
-        "name": "深度版",
-        "price_cny": 199,
-        "tagline": "主题多轮追踪 + 归档 & RAG 导出",
-        "features": [
-            "多轮主题分析（战略/合规/舆情）",
-            "Playbook 归档 + RAG JSON 导出",
-            "关键来源链路 + 可信度标注",
-        ],
-    },
-    "pro": {
-        "name": "专业版",
-        "price_cny": 299,
-        "tagline": "定制检索关键词 + 批量导出 + 回调",
-        "features": [
-            "自定义检索关键词 + 重点行业库",
-            "批量导出（Markdown/JSON）",
-            "API 回调与状态推送",
-        ],
-    },
-}
-
-ADD_ONS: Dict[str, Dict[str, Any]] = {
-    "playbook_export": {
-        "name": "Playbook 归档导出",
-        "price_cny": 20,
-        "description": "导出 PDF/JSON，方便文件留存或再训练",
-    },
-    "custom_recency": {
-        "name": "自定义时效 (12/36 个月)",
-        "price_cny": 30,
-        "description": "覆盖 12/36 个月敏感窗口，适合投前/并购尽调",
-    },
-    "human_review": {
-        "name": "人工复核",
-        "price_cny": 100,
-        "description": "由分析师二次校验结论，附差异备注",
-    },
+    }
 }
 
 
@@ -119,15 +74,8 @@ class CompanyPayload(BaseModel):
 
 
 class OrderRequest(BaseModel):
-    plan_id: str = Field(..., description="standard/deep/pro")
-    add_ons: List[str] = Field(default_factory=list)
+    plan_id: str = Field(..., description="唯一支持的方案：standard")
     company: CompanyPayload
-    custom_time_window_months: int | None = Field(
-        default=None,
-        ge=12,
-        le=36,
-        description="自定义时效，仅当购买 custom_recency 时生效",
-    )
     wechat_code: str | None = Field(
         default=None, description="wx.login() code；若已有 openid 可为空"
     )
@@ -151,7 +99,6 @@ class PricingItem(BaseModel):
 
 class PricingCatalog(BaseModel):
     plans: List[PricingItem]
-    add_ons: List[PricingItem]
 
 
 class PricingBreakdownItem(BaseModel):
@@ -166,7 +113,6 @@ class OrderSummary(BaseModel):
     total_cny: int
     breakdown: List[PricingBreakdownItem]
     plan_id: str
-    add_ons: List[str]
 
 
 class OrderDetail(OrderSummary):
@@ -215,42 +161,12 @@ def _ensure_plan(plan_id: str) -> Dict[str, Any]:
     return plan
 
 
-def _ensure_addons(add_ons: List[str]) -> List[Dict[str, Any]]:
-    resolved = []
-    for addon_id in add_ons:
-        addon = ADD_ONS.get(addon_id)
-        if not addon:
-            raise HTTPException(status_code=400, detail=f"未知附加项：{addon_id}")
-        resolved.append(addon)
-    return resolved
-
-
-def _compute_pricing(plan_id: str, add_ons: List[str]) -> tuple[int, List[PricingBreakdownItem]]:
+def _compute_pricing(plan_id: str) -> tuple[int, List[PricingBreakdownItem]]:
     plan = _ensure_plan(plan_id)
-    selected_addons = _ensure_addons(add_ons)
     breakdown = [
         PricingBreakdownItem(kind="plan", label=plan["name"], amount_cny=plan["price_cny"])
     ]
-    total = plan["price_cny"]
-    for addon_id, addon in zip(add_ons, selected_addons):
-        breakdown.append(
-            PricingBreakdownItem(
-                kind=f"add_on:{addon_id}", label=addon["name"], amount_cny=addon["price_cny"]
-            )
-        )
-        total += addon["price_cny"]
-    return total, breakdown
-
-
-def _require_custom_window(request: OrderRequest) -> int | None:
-    if request.custom_time_window_months is None:
-        return None
-    if "custom_recency" not in request.add_ons:
-        raise HTTPException(
-            status_code=400,
-            detail="如需自定义时效，请购买 custom_recency 附加项",
-        )
-    return request.custom_time_window_months
+    return plan["price_cny"], breakdown
 
 
 def _fetch_wechat_openid(code: str) -> str:
@@ -326,11 +242,7 @@ def get_pricing() -> PricingCatalog:
         PricingItem(id=plan_id, name=meta["name"], price_cny=meta["price_cny"], tagline=meta["tagline"], features=meta["features"])
         for plan_id, meta in PRICING_PLANS.items()
     ]
-    add_ons = [
-        PricingItem(id=addon_id, name=meta["name"], price_cny=meta["price_cny"], description=meta["description"])
-        for addon_id, meta in ADD_ONS.items()
-    ]
-    return PricingCatalog(plans=plans, add_ons=add_ons)
+    return PricingCatalog(plans=plans)
 
 
 @app.post("/wechat/login")
@@ -342,15 +254,9 @@ def exchange_code(payload: LoginRequest) -> Dict[str, str]:
 @app.post("/wechat/orders", response_model=OrderSummary)
 def create_order(request: OrderRequest, background_tasks: BackgroundTasks) -> OrderSummary:
     _ensure_plan(request.plan_id)
-    _ensure_addons(request.add_ons)
-    custom_window = _require_custom_window(request)
+    company_payload = CompanyPayload(**_model_dump(request.company))
 
-    payload_dict = _model_dump(request.company)
-    if custom_window is not None:
-        payload_dict["time_window_months"] = custom_window
-    company_payload = CompanyPayload(**payload_dict)
-
-    total, breakdown = _compute_pricing(request.plan_id, request.add_ons)
+    total, breakdown = _compute_pricing(request.plan_id)
 
     openid = request.openid
     if not openid and request.wechat_code:
@@ -366,7 +272,6 @@ def create_order(request: OrderRequest, background_tasks: BackgroundTasks) -> Or
         total_cny=total,
         breakdown=breakdown,
         plan_id=request.plan_id,
-        add_ons=request.add_ons,
     )
 
     record = OrderRecord(summary=summary, company_payload=company_payload)
@@ -398,7 +303,6 @@ def get_order(order_id: str) -> OrderDetail:
         total_cny=record.summary.total_cny,
         breakdown=record.summary.breakdown,
         plan_id=record.summary.plan_id,
-        add_ons=record.summary.add_ons,
         company=record.company_payload,
         prompt=record.prompt,
         answer=record.answer,
@@ -408,4 +312,4 @@ def get_order(order_id: str) -> OrderDetail:
     return detail
 
 
-__all__ = ["app", "PRICING_PLANS", "ADD_ONS"]
+__all__ = ["app", "PRICING_PLANS"]
