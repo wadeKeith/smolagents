@@ -3,9 +3,6 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import torch
-from transformers import Mxfp4Config
-
 from scripts.company_rag_store import CompanyRAGStore
 from scripts.rag_curator import RAGCurator
 from scripts.rag_tools import CompanyRAGIngestTool, CompanyRAGRetrieveTool
@@ -20,9 +17,8 @@ from scripts.text_web_browser import (
     VisitTool,
 )
 from scripts.visual_qa import visualizer
-from smolagents import CodeAgent, GoogleSearchTool, ToolCallingAgent, TransformersModel
+from smolagents import CodeAgent, GoogleSearchTool, OpenAIServerModel, ToolCallingAgent
 from smolagents.models import MessageRole
-from smolagents.cli import load_model
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -42,6 +38,31 @@ BROWSER_CONFIG = {
 os.makedirs(f"./{BROWSER_CONFIG['downloads_folder']}", exist_ok=True)
 
 
+def _build_remote_model(
+    model_id: str,
+    api_key_envs: list[str],
+    api_base_envs: list[str],
+    default_api_base: str,
+) -> OpenAIServerModel:
+    api_key = None
+    for env in api_key_envs:
+        if env and os.getenv(env):
+            api_key = os.getenv(env)
+            break
+    if api_key is None:
+        raise ValueError(f"Missing API key for model {model_id}. Checked env vars: {api_key_envs}")
+
+    api_base = None
+    for env in api_base_envs:
+        if env and os.getenv(env):
+            api_base = os.getenv(env)
+            break
+    if api_base is None:
+        api_base = default_api_base
+
+    return OpenAIServerModel(api_key=api_key, api_base=api_base, model_id=model_id)
+
+
 def create_agent(
     model_type,
     model_id="o1",
@@ -53,26 +74,35 @@ def create_agent(
     manage_max_steps=12,
     company_context: dict[str, Any] | None = None,
 ):
-    from smolagents.models import MessageRole
-
-    model = load_model(model_type, model_id, provider=provider, api_base=api_base, api_key=api_key)
-
     context = (company_context or {}).copy()
     text_limit = 100000
     rag_store = CompanyRAGStore()
-    try:
-        quantization_config = Mxfp4Config(dequantize=True)
-        model_kwargs = dict(quantization_config=quantization_config)
-        curation_model = TransformersModel(
-            model_id="openai/gpt-oss-20b",
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
-            max_new_tokens=500000,
-            model_kwargs=model_kwargs,
-        )
-    except Exception:
-        curation_model = model
-    rag_curator = RAGCurator(curation_model)
+
+    manager_model = _build_remote_model(
+        model_id=os.getenv("MANAGER_MODEL_ID", "gpt-4o"),
+        api_key_envs=["MANAGER_API_KEY", "OPENAI_API_KEY"],
+        api_base_envs=["MANAGER_API_BASE", "OPENAI_API_BASE"],
+        default_api_base="https://aihubmix.com/v1",
+    )
+    search_model = _build_remote_model(
+        model_id=os.getenv("SEARCH_MODEL_ID", "qwen3-max"),
+        api_key_envs=["SEARCH_API_KEY", "OPENAI_API_KEY"],
+        api_base_envs=["SEARCH_API_BASE", "OPENAI_API_BASE"],
+        default_api_base="https://aihubmix.com/v1",
+    )
+    critic_model = _build_remote_model(
+        model_id=os.getenv("CRITIC_MODEL_ID", "claude-haiku-4-5"),
+        api_key_envs=["CRITIC_API_KEY", "FIREWORKS_API_KEY", "OPENAI_API_KEY"],
+        api_base_envs=["CRITIC_API_BASE", "FIREWORKS_API_BASE", "OPENAI_API_BASE"],
+        default_api_base="https://aihubmix.com/v1",
+    )
+    curator_model = _build_remote_model(
+        model_id=os.getenv("CURATOR_MODEL_ID", "glm-4.6"),
+        api_key_envs=["CURATOR_API_KEY", "OPENAI_API_KEY"],
+        api_base_envs=["CURATOR_API_BASE", "OPENAI_API_BASE"],
+        default_api_base="https://aihubmix.com/v1",
+    )
+    rag_curator = RAGCurator(curator_model)
     location_hint_fallback = context.get("company_site") or "目标地区"
 
     def resolve_company_name() -> str:
@@ -284,7 +314,7 @@ def create_agent(
             return output
 
     browser = SimpleTextBrowser(**BROWSER_CONFIG)
-    caching_text_inspector = CachingTextInspectorTool(model, text_limit)
+    caching_text_inspector = CachingTextInspectorTool(manager_model, text_limit)
 
     WEB_TOOLS = [
         CompanyRAGRetrieveTool(rag_store, resolve_company_name),
@@ -311,7 +341,7 @@ def create_agent(
     - 对于自动工具未覆盖的线下资料或额外文件，可调用 `company_rag_ingest` 写入知识库；避免对同一网页或搜索结果重复入库。
     - 禁止编造或臆测，如信息缺失需说明限制并建议线下或高权限取证路径。"""
     text_webbrowser_agent = ToolCallingAgent(
-        model=model,
+        model=search_model,
         tools=WEB_TOOLS,
         max_steps=search_max_steps,
         verbosity_level=2,
@@ -348,7 +378,7 @@ def create_agent(
 仅基于提交材料做判断，不得凭空推断。"""
 
     critic_agent = ToolCallingAgent(
-        model=model,
+        model=critic_model,
         tools=[],
         max_steps=critic_max_steps,
         verbosity_level=2,
@@ -369,7 +399,7 @@ def create_agent(
 保持指令清晰可执行，避免冗长描述，确保多轮协作高效闭环。"""
 
     manager_agent = CodeAgent(
-        model=model,
+        model=manager_model,
         tools=[visualizer, caching_text_inspector],
         max_steps=manage_max_steps,
         verbosity_level=2,

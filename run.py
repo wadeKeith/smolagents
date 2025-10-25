@@ -126,7 +126,7 @@ def parse_args():
         default="OpenAIServerModel",
         help="The model type to use (e.g., OpenAIServerModel, LiteLLMModel, TransformersModel, InferenceClientModel, VLLMModel)",
     )
-    parser.add_argument("--model-id", type=str, default="glm-4.6")
+    parser.add_argument("--model-id", type=str, default="claude-haiku-4-5")
     parser.add_argument(
         "--provider",
         type=str,
@@ -136,13 +136,13 @@ def parse_args():
     parser.add_argument(
         "--api-base",
         type=str,
-        default="https://open.bigmodel.cn/api/paas/v4/",
+        default="https://aihubmix.com/v1",
         help="The API base to use for the model",
     )
     parser.add_argument(
         "--api-key",
         type=str,
-        default="7e7e6904e2e24959ae655725cc222da2.pRf9WNy93dRrSDrm",
+        default="sk-T6U5Pf6OSazCEFjqEdCa4a88E89242A898Bc453b07AeE156",
         help="The API key to use for the model",
     )
     parser.add_argument(
