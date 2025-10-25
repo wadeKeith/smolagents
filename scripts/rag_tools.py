@@ -10,22 +10,13 @@ from scripts.company_rag_store import CompanyRAGStore
 class CompanyRAGRetrieveTool(Tool):
     name = "company_rag_retrieve"
     description = (
-        "从本地向量数据库中检索与目标企业相关的已缓存资料。"
+        "读取本地为企业维护的 Playbook，总结近期整理的关键事实、风险与机会。"
         "在联网搜索前先调用此工具，可以减少重复抓取。"
     )
     inputs = {
         "company_name": {
             "type": "string",
             "description": "企业名称，用于定位对应的本地向量库。",
-        },
-        "query": {
-            "type": "string",
-            "description": "检索关键词或主题描述，使用陈述句更有利于匹配。",
-        },
-        "top_k": {
-            "type": "integer",
-            "description": "返回的向量匹配数量，默认 5。",
-            "nullable": True,
         },
     }
     output_type = "string"
@@ -35,26 +26,16 @@ class CompanyRAGRetrieveTool(Tool):
         self._store = rag_store
         self._company_name_resolver = company_name_resolver
 
-    def forward(self, company_name: str, query: str, top_k: int | None = 5) -> str:
+    def forward(self, company_name: str) -> str:
         target_company = (company_name or "").strip()
         if not target_company and callable(self._company_name_resolver):
             target_company = self._company_name_resolver() or ""
         if not target_company:
             return "company_name 不能为空。"
-        if not query.strip():
-            return "query 不能为空。"
-        results = self._store.query(company_name=target_company, query=query, top_k=top_k or 5)
-        if not results:
-            return "未在本地知识库中找到相关内容，可继续进行网页搜索。"
-        formatted_chunks = []
-        for idx, item in enumerate(results, start=1):
-            meta = item.get("metadata", {})
-            formatted_chunks.append(
-                f"[RAG-{idx}] chunk_index={meta.get('chunk_index', 'NA')} "
-                f"doc_hash={meta.get('doc_hash', 'NA')} 来源文件: {meta.get('raw_path', 'NA')}\n"
-                f"{item.get('content', '').strip()}"
-            )
-        return "\n\n".join(formatted_chunks)
+        playbook = self._store.get_playbook(target_company)
+        if playbook.strip():
+            return playbook
+        return "Playbook 为空，建议先执行搜索或查看官网资料后再试。"
 
 
 class CompanyRAGIngestTool(Tool):
@@ -85,10 +66,18 @@ class CompanyRAGIngestTool(Tool):
     }
     output_type = "string"
 
-    def __init__(self, rag_store: CompanyRAGStore, company_name_resolver=None):
+    def __init__(
+        self,
+        rag_store: CompanyRAGStore,
+        company_name_resolver=None,
+        location_hint_resolver=None,
+        curator=None,
+    ):
         super().__init__()
         self._store = rag_store
         self._company_name_resolver = company_name_resolver
+        self._location_hint_resolver = location_hint_resolver
+        self._curator = curator
 
     def forward(self, company_name: str, content: str, source: str | None = None, category: str | None = None) -> str:
         target_company = (company_name or "").strip()
@@ -108,4 +97,16 @@ class CompanyRAGIngestTool(Tool):
             contents=[content],
             metadata=metadata,
         )
-        return f"已入库，生成 {stored_chunks} 个向量分片。"
+        location_hint = ""
+        if callable(self._location_hint_resolver):
+            location_hint = self._location_hint_resolver() or ""
+        if self._curator is not None:
+            self._store.update_playbook(
+                company_name=target_company,
+                location_hint=location_hint or "",
+                source=source or "manual_ingest",
+                category=category or "manual",
+                curated_entry=content,
+                curator=self._curator,
+            )
+        return f"已入库，并生成 {stored_chunks} 个向量分片，Playbook 已更新。"

@@ -7,3 +7,5 @@ sentence-transformers/
 thenlper/
 rag_corpus/
 rag_vector_db/
+openai/
+rag_playbooks/

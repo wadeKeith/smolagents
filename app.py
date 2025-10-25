@@ -5,27 +5,13 @@ import gradio as gr
 
 args = parse_args()
 
-company_context = build_company_variables(
+initial_variables = build_company_variables(
     company_name=args.company_name,
     jurisdiction_hint=args.jurisdiction_hint,
     time_window_months=args.time_window_months,
     report_language=args.report_language,
     company_site=args.company_site,
 )
-
-agent = create_agent(
-    model_type=args.model_type,
-    model_id=args.model_id,
-    provider=args.provider,
-    api_base=args.api_base,
-    api_key=args.api_key,
-    search_max_steps=args.search_max_steps,
-    critic_max_steps=args.critic_max_steps,
-    manage_max_steps=args.manage_max_steps,
-    company_context=company_context,
-)
-
-initial_variables = company_context.copy()
 
 
 def _sanitize_text(value: str | None) -> str | None:
@@ -51,10 +37,18 @@ def run_background_check(company_name, jurisdiction_hint, time_window_months, re
         report_language=_sanitize_text(report_language),
         company_site=_sanitize_text(company_site),
     )
-    company_context.clear()
-    company_context.update(updated_variables)
-
-    prompt = build_company_prompt(company_context)
+    prompt = build_company_prompt(updated_variables)
+    agent = create_agent(
+        model_type=args.model_type,
+        model_id=args.model_id,
+        provider=args.provider,
+        api_base=args.api_base,
+        api_key=args.api_key,
+        search_max_steps=args.search_max_steps,
+        critic_max_steps=args.critic_max_steps,
+        manage_max_steps=args.manage_max_steps,
+        company_context=updated_variables,
+    )
     answer = agent.run(prompt)
     return prompt, answer
 
