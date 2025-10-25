@@ -2,4 +2,4 @@ nohup.out
 smolagents.egg-info/
 __pycache__
 sentence-transformers/
-
+.DS_Store

@@ -1,142 +1,169 @@
-## 企业背调智能体框架（中文说明）
+## 企业尽调智能体（中文说明）
 
-> 一个以 Playbook 为核心、支持多模型协同、具备自动整理与监控能力的企业背调应用。
+> 一个聚焦“企业背景调查 / 背调 Playbook”的多智能体系统：自动搜索 + RAG 精炼 + Playbook 管理 + 成本监控。
 
 ---
 
 ### 1. 架构概览
 
 ```
-┌─────────┐    ┌────────────┐    ┌─────────────┐
-│Manager  │───▶│Search Agent│───▶│浏览工具/RAG │
-│(CodeAgent)│  └────────────┘    └─────────────┘
-│  └Critic──▶ 使用不同模型协作           │
-└─────────┘                           │
-                                       ▼
-                              ┌────────────────┐
-                              │Playbook + RAG  │
-                              │(Chroma + 本地档)│
-                              └────────────────┘
+┌─────────────┐        ┌─────────────┐
+│ Manager      │───────▶│ Critic      │
+│ (gpt-4o)     │        │ (Claude Haiku)│
+└──────┬──────┘        └──────┬──────┘
+       │                      │
+       ▼                      │
+┌─────────────┐               │
+│ SearchAgent │───────────────┘
+│ (Qwen2.5-72B)│  调用浏览器、搜索、RAG 工具
+└──────┬──────┘
+       ▼
+┌───────────────────────┐
+│ RAG + Playbook        │ ◀─ 自动整理器 (gpt-4o-mini)
+│ ・Chroma 向量库        │    记录每次入库的成本
+│ ・Playbook + 归档      │
+└───────────────────────┘
 ```
 
-- **Manager (默认 gpt-4o)**：负责解析背景调查模版、规划任务、调度子智能体并整合最终报告。
-- **Search agent (默认 Fireworks Qwen2.5-72B)**：执行联网检索/浏览任务，自动将新发现交给整理器。
-- **Critic agent (默认 Claude 3 Haiku)**：审核阶段性产出，强调 Playbook 覆盖度与质量。
-- **RAG Curator (默认 gpt-4o-mini)**：对网页正文/搜索摘要做去噪、去重，写入向量库和 Playbook。
-- **Playbook & RAG**：`rag_vector_db/` 保存向量化摘要，`rag_playbooks/` 保存最新版 Playbook，`rag_playbooks/archive/` 保存历史版本，`rag_corpus/` 存放原始快照。
+- **Manager**：解析 `company_template`，规划任务、汇总最终报告。
+- **SearchAgent**：先读 Playbook，再按需联网；所有抓取内容都会进入整理管线。
+- **Critic**：检查覆盖度、可信度、Playbook 更新情况。
+- **RAG Curator**：将网页/搜索结果压缩成 200 词内要点，写入向量库 & Playbook，自动记录成本。
+- **Playbook**：`rag_playbooks/` 下保存当前版本；`rag_playbooks/archive/` 保存历史快照（可浏览/清理）。
 
 ---
 
 ### 2. 快速开始
 
-1. **依赖安装**
+1. 安装依赖
    ```bash
    pip install -e .
    ```
-2. **配置环境变量（示例）**
+2. 配置模型（可按需调整，缺省时会回退到 CLI 指定模型）
    ```bash
    export MANAGER_MODEL_ID=gpt-4o
-   export MANAGER_API_KEY=sk-xxx
+   export MANAGER_API_KEY=...
+
    export SEARCH_MODEL_ID=fireworks_ai/qwen-2.5-72b-instruct
-   export SEARCH_API_KEY=fw-xxx
+   export FIREWORKS_API_KEY=...
+
    export CRITIC_MODEL_ID=anthropic/claude-3-haiku-20240307
-   export CRITIC_API_KEY=fw-yyy
+   export CRITIC_API_KEY=...
+
    export CURATOR_MODEL_ID=gpt-4o-mini
-   export CURATOR_API_KEY=sk-zzz
-   export SERPAPI_API_KEY=<可选：联网搜索>
-   ```
-   > 若未设置对应 env，系统会自动回退到 CLI 指定的 `--model-type/--model-id`。
+   export CURATOR_API_KEY=...
 
-3. **命令行运行**
+   export SERPAPI_API_KEY=<可选，用于 Google 搜索>
+   ```
+   若未设置 `SERPAPI_API_KEY`，系统会自动切换到 `ddgs`（DuckDuckGo）检索。
+
+3. 运行命令行
    ```bash
-   python run.py --company-name "示例公司" --company-site "上海"
+   python run.py --company-name "某某科技" --company-site "上海" --time-window-months 24
    ```
 
-4. **Gradio 前端**
+4. Gradio 前端
    ```bash
    python app.py
    ```
-   每次提交都会基于当前表单创建全新 agent，确保不会继承上一家公司的记忆。
+   每次提交都会创建全新 agent，避免不同公司之间的状态污染。
 
 ---
 
-### 3. 模型/成本监控
-
-- 所有整理调用（RAG Curator）都会写入 `metrics/curation_log.jsonl`，记录时间、公司、来源、输入/输出字符数。  
-- 查看最近 24 小时的整理成本：
-  ```bash
-  python scripts/curation_monitor.py --window-hours 24
-  ```
-- Google Search 若缺乏 SERP API key，会自动切换到 `ddgs`（DuckDuckGo 搜索）确保流程不中断。
-
----
-
-### 4. Playbook/归档维护
-
-- **实时写入**：任何网页访问、搜索、文件阅读都会在整理后写入 Playbook。
-- **自动归档**：每次更新会将旧版本保存到 `rag_playbooks/archive/<slug>/timestamp.md`。
-- **管理脚本**
-  ```bash
-  # 列出当前所有 Playbook
-  python scripts/playbook_manager.py list
-
-  # 查看公司 Playbook / 指定归档版本
-  python scripts/playbook_manager.py show --company "示例公司"
-  python scripts/playbook_manager.py show --company "示例公司" --version 20250101120000
-
-  # 清理归档
-  python scripts/playbook_manager.py prune --company "示例公司" --keep 5
-  python scripts/playbook_manager.py prune-all --keep 10
-  ```
-- **RAG 查询**：`company_rag_retrieve` 现在会返回 “Playbook + 最近原始片段”，当 Playbook 还未覆盖某主题时，agent 仍可回退到原始摘要。
-
----
-
-### 5. 目录与关键脚本
+### 3. 关键目录
 
 | 路径 | 功能 |
 | --- | --- |
-| `scripts/agent_factory.py` | 统一创建多模型智能体：manager/search/critic/curator、RAG 更新、缓存工具等。 |
-| `scripts/rag_curator.py` | 背调资料整理器。 |
-| `scripts/company_rag_store.py` | Chroma 存储 + Playbook/归档管理。 |
-| `scripts/rag_tools.py` | Playbook 检索/手动入库工具。 |
-| `scripts/curation_monitor.py` | 整理成本监控脚本。 |
-| `scripts/playbook_manager.py` | Playbook 浏览与清理工具。 |
-| `metrics/curation_log.jsonl` | 整理调用日志。 |
-| `rag_playbooks/` | 最新 Playbook；`archive/` 中存历史版本。 |
+| `scripts/agent_factory.py` | 统一创建多模型 agent（manager/search/critic/curator）并自动缓存实例。 |
+| `scripts/company_rag_store.py` | 向量库 + 原始快照 + Playbook + 归档管理。 |
+| `scripts/rag_curator.py` | 整理器（对内容去重/压缩），并配合 `metrics/curation_log.jsonl` 记录成本。 |
+| `scripts/rag_tools.py` | `company_rag_retrieve`（Playbook + 原始片段），`company_rag_ingest`（手动整理入库）。 |
+| `scripts/playbook_manager.py` | Playbook 浏览/清理脚本（见下方）。 |
+| `scripts/curation_monitor.py` | 整理流程的频率/字符量监控。 |
+| `rag_playbooks/` | 最新 Playbook；`archive/` 保存历史版本。 |
+| `rag_vector_db/` | Chroma 向量库数据。 |
+| `rag_corpus/` | 原始抓取快照（自动裁剪保留最近 N 个）。 |
 
 ---
 
-### 6. 任务流程（与模板）
+### 4. Playbook 浏览与清理
 
-1. CLI/Gradio 生成公司模板 (`run.py` 的 `company_template`)。
-2. Manager 拆解任务、调度 search agent，并强制在每个阶段后由 critic 审核。
-3. search agent **先** 调用 `company_rag_retrieve` 读取 Playbook，再决定是否联网。
-4. 任意网页/搜索内容 → `curate_for_rag` → RAG + Playbook + 监控日志。
-5. critic 检查 Playbook 覆盖度，必要时要求补查。
-6. manager 在所有高优缺口被解释/补齐后才输出最终报告。
+```bash
+# 列出所有 Playbook
+python scripts/playbook_manager.py list
+
+# 查看某家公司当前/历史版本
+python scripts/playbook_manager.py show --company "示例公司"
+python scripts/playbook_manager.py show --company "示例公司" --version 20250101120000
+
+# 清理单个公司的归档
+python scripts/playbook_manager.py prune --company "示例公司" --keep 5
+
+# 批量清理所有公司
+python scripts/playbook_manager.py prune-all --keep 10
+```
+
+- 修改 `keep` 可以控制归档数量。
+- 最新 Playbook 写在 `rag_playbooks/<slug>.md`，归档存放在 `rag_playbooks/archive/<slug>/timestamp.md`。
+
+---
+
+### 5. 整理成本监控
+
+整理器每次运行都会记录输入/输出字符数，写入 `metrics/curation_log.jsonl`。可用脚本查看：
+
+```bash
+# 查看过去 24 小时
+python scripts/curation_monitor.py --window-hours 24
+
+# 结果示例
+{
+  "window_seconds": 86400,
+  "events": 12,
+  "input_chars": 56000,
+  "output_chars": 8400,
+  "per_company": {
+    "示例公司": {"events": 8, "input_chars": 43000, "output_chars": 6200},
+    "...": {...}
+  }
+}
+```
+
+根据统计可判断整理是否过于频繁，必要时可更换更廉价模型或调整 `curate_for_rag` 的长度阈值。
+
+---
+
+### 6. 工作流程
+
+1. `run.py` 根据 CLI/输入生成 `company_template` 背调提示。
+2. manager 使用 `gpt-4o`，按模板拆解任务，调度 search agent、critic。
+3. search agent **首先** 调用 `company_rag_retrieve` 阅读 Playbook；如需补充，再调用浏览器/Search 工具。
+4. 任何新抓取内容都会经过整理器 → 写入向量库、Playbook，并记入成本日志。
+5. critic 在每个阶段检查 Playbook 覆盖度并给出整改建议。
+6. manager 仅在高优缺口得到解释/补充时才输出最终报告。
 
 ---
 
 ### 7. 常见问题
 
-- **为何 Playbook 内容会“变少”？**  
-  现在在更新前会自动将旧版本归档，你可以通过 `scripts/playbook_manager.py show --version` 找回历史版本。
+- **Playbook 为什么会“变少”？**  
+  现在更新前会先归档旧版本，你可以用 `scripts/playbook_manager.py show --version ...` 找回历史版本。
+
+- **没有设置某个模型的 API key 会怎样？**  
+  `_build_remote_model` 会回退到 CLI 模型或 manager 模型；若连它们都没有，就会抛错，需要补充环境变量。
+
+- **SERP API key 不可用会导致失败吗？**  
+  不会，`CachingGoogleSearchTool` 会自动用 DuckDuckGo (`ddgs`) 兜底，不过结果可能不如 Google 精准。
 
 - **如何限制整理成本？**  
-  通过 `scripts/curation_monitor.py` 观察调用频率，必要时可以在 `.env` 中设置不同整理模型（如更小的 Qwen/通义）或调整 `curate_for_rag` 长度阈值。
-
-- **SERP API Key 不可用时会怎样？**  
-  搜索工具会自动切换到 DuckDuckGo (`ddgs`)；若你需要精准 Google 结果，请在 `.env` 中设置 `SERPAPI_API_KEY`。
+  通过 `scripts/curation_monitor.py` 观察调用频率，必要时更换 `CURATOR_MODEL_ID` 为更小的模型，或者增大 `curate_for_rag` 的最小长度，减少短文本整理。
 
 ---
 
-### 8. 贡献/自定义
+### 8. 贡献与扩展
 
-- 可通过修改 `scripts/agent_factory.py` 中的 `_build_remote_model` 或 `.env`，自定义任意 agent 的模型/端点。
-- 若需要集成新的 RAG 或监控后端，可在 `scripts/company_rag_store.py` 与 `scripts/curation_monitor.py` 扩展。
-- 欢迎提交 PR/Issue，或在 README 中列出的脚本基础上继续构建。
+- 所有关键逻辑都集中在 `scripts/`，可按需更换模型、工具或 Playbook 策略。
+- 欢迎根据自身场景扩展更多 Playbook 管理脚本或监控指标。
+- 提交 PR 之前建议运行 `python -m compileall run.py scripts/*.py`，确保语法无误。
 
----
-
-祝你调查顺利，记得善用 Playbook 与监控脚本！ ✨
+祝调查顺利，善用 Playbook 和监控工具！ ✨
