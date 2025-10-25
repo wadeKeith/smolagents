@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/order/order"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#111827",
+    "navigationBarTitleText": "企业尽调助手",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f6f7fb"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

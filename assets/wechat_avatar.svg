@@ -1,0 +1,48 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">企业背调助手小程序头像</title>
+  <desc id="desc">渐变圆形背景，中央是盾牌与放大镜结合的图形，代表可信赖的背景调查服务。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#36d1dc" />
+      <stop offset="100%" stop-color="#5b86e5" />
+    </linearGradient>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#cde5ff" stop-opacity="0.95" />
+    </linearGradient>
+    <linearGradient id="magnifier" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3f7bf1" />
+      <stop offset="100%" stop-color="#163b88" />
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#113c63" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <circle cx="256" cy="256" r="220" fill="url(#bg)" />
+
+  <g filter="url(#softShadow)">
+    <!-- Wave layers to hint data flow -->
+    <path d="M82 276c40-42 96-66 174-66s134 24 174 66c-40 38-97 60-174 60s-134-22-174-60z" fill="#fff" fill-opacity="0.12" />
+    <path d="M110 318c36-32 84-50 146-50s110 18 146 50c-36 30-84 46-146 46s-110-16-146-46z" fill="#fff" fill-opacity="0.18" />
+
+    <!-- Shield -->
+    <path d="M256 128l114 34v82c0 78-54 146-114 172-60-26-114-94-114-172v-82z" fill="url(#shield)" />
+    <path d="M256 128l114 34v82c0 78-54 146-114 172-60-26-114-94-114-172v-82z" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="6" />
+
+    <!-- Magnifier composed of circle + handle -->
+    <g transform="translate(0, 16)">
+      <circle cx="256" cy="248" r="82" fill="none" stroke="url(#magnifier)" stroke-width="20" />
+      <circle cx="256" cy="248" r="62" fill="#ffffff" fill-opacity="0.65" />
+      <path d="M320 312l58 58" stroke="url(#magnifier)" stroke-width="24" stroke-linecap="round" />
+      <circle cx="256" cy="248" r="18" fill="#36d1dc" />
+    </g>
+  </g>
+
+  <!-- Accent stars -->
+  <g fill="#ffffff" fill-opacity="0.8">
+    <circle cx="135" cy="150" r="6" />
+    <circle cx="378" cy="142" r="5" />
+    <circle cx="410" cy="210" r="4" />
+  </g>
+</svg>

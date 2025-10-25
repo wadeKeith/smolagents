@@ -1,0 +1,61 @@
+<view class="page">
+  <view class="card" wx:if="{{detail}}">
+    <view class="order-header">
+      <view>
+        <view class="label">订单号</view>
+        <view class="value">{{detail.order_id}}</view>
+      </view>
+      <view class="status-pill status-{{detail.status}}">{{statusLabel}}</view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">金额 & 套餐</view>
+      <view class="value">¥{{detail.total_cny}} · {{detail.plan_id}}</view>
+      <view class="breakdown">
+        <view class="breakdown-item" wx:for="{{detail.breakdown}}" wx:key="label">
+          <text>{{item.label}}</text>
+          <text>¥{{item.amount_cny}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">企业信息</view>
+      <view class="company-line">名称：{{detail.company.company_name}}</view>
+      <view class="company-line" wx:if="{{detail.company.company_site}}">地区：{{detail.company.company_site}}</view>
+      <view class="company-line">时间窗口：{{detail.company.time_window_months}} 个月</view>
+    </view>
+
+    <view class="section" wx:if="{{detail.prompt}}">
+      <view class="section-title">Agent Prompt</view>
+      <scroll-view class="code-block" scroll-y="true">
+        <text>{{detail.prompt}}</text>
+      </scroll-view>
+    </view>
+
+    <view class="section" wx:if="{{detail.answer}}">
+      <view class="section-title">尽调结果</view>
+      <scroll-view class="code-block" scroll-y="true">
+        <text>{{detail.answer}}</text>
+      </scroll-view>
+    </view>
+
+    <view class="section error" wx:if="{{detail.error}}">
+      <view class="section-title">错误信息</view>
+      <text>{{detail.error}}</text>
+    </view>
+
+    <view class="section meta">
+      <view>最近更新：{{updatedTime}}</view>
+    </view>
+
+    <view class="actions">
+      <button type="primary" loading="{{isRefreshing}}" bindtap="refreshOrder">刷新状态</button>
+      <button class="ghost" bindtap="goHome">返回首页</button>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!detail}}">
+    <text>正在加载订单...</text>
+  </view>
+</view>

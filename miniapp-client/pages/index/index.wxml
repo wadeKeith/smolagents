@@ -1,0 +1,94 @@
+<view class="page">
+  <view class="hero card">
+    <view class="hero-title">企业尽调智能体 · 小程序端</view>
+    <view class="hero-desc">选择套餐 → 填写企业信息 → 一键生成背调订单。</view>
+    <view class="hero-base">当前后端：{{baseUrl}}</view>
+  </view>
+
+  <view class="section card">
+    <view class="section-title">套餐选择</view>
+    <view class="plan-list">
+      <block wx:for="{{plans}}" wx:key="id">
+        <view class="plan-item {{selectedPlan === item.id ? 'active' : ''}}" bindtap="handlePlanTap" data-plan-id="{{item.id}}">
+          <view class="plan-header">
+            <text class="plan-name">{{item.name}}</text>
+            <text class="plan-price">¥{{item.price_cny}}</text>
+          </view>
+          <view class="plan-tagline">{{item.tagline}}</view>
+          <view class="plan-features">
+            <text wx:for="{{item.features}}" wx:key="index" class="plan-feature">• {{item}}</text>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="section card">
+    <view class="section-title">附加项</view>
+    <checkbox-group class="addon-list" bindchange="handleAddonChange">
+      <label wx:for="{{addOns}}" wx:key="id" class="addon-item">
+        <checkbox value="{{item.id}}" checked="{{selectedAddOns.indexOf(item.id) > -1}}" />
+        <view class="addon-desc">
+          <view class="addon-name">{{item.name}}</view>
+          <view class="addon-text">¥{{item.price_cny}} · {{item.description}}</view>
+        </view>
+      </label>
+    </checkbox-group>
+    <view class="addon-empty" wx:if="{{!addOns.length}}">暂无附加项，稍后再试。</view>
+  </view>
+
+  <view class="section card">
+    <view class="section-title">企业信息</view>
+    <form bindsubmit="handleSubmit" report-submit="true">
+      <view class="form-item">
+        <text>企业名称</text>
+        <input placeholder="如：某某科技有限公司" value="{{form.company_name}}" bindinput="handleInput" data-field="company_name" />
+      </view>
+      <view class="form-item">
+        <text>重点地区 / 城市</text>
+        <input placeholder="如：上海" value="{{form.company_site}}" bindinput="handleInput" data-field="company_site" />
+      </view>
+      <view class="form-row">
+        <view class="form-item half">
+          <text>司法区域</text>
+          <input placeholder="CN" value="{{form.jurisdiction_hint}}" bindinput="handleInput" data-field="jurisdiction_hint" />
+        </view>
+        <view class="form-item half">
+          <text>报告语言</text>
+          <input placeholder="中文" value="{{form.report_language}}" bindinput="handleInput" data-field="report_language" />
+        </view>
+      </view>
+      <view class="form-item">
+        <text>时间窗口</text>
+        <picker mode="selector" range="{{timeWindowOptions}}" value="{{timeWindowIndex}}" bindchange="handleWindowChange">
+          <view class="picker-value">过去 {{form.time_window_months}} 个月</view>
+        </picker>
+      </view>
+      <view class="form-item" wx:if="{{selectedAddOns.indexOf('custom_recency') > -1}}">
+        <text>自定义时效 (需购附加项)</text>
+        <picker mode="selector" range="{{customWindowOptions}}" value="{{customWindowIndex}}" bindchange="handleCustomWindowChange">
+          <view class="picker-value">{{customWindowValue}} 个月</view>
+        </picker>
+      </view>
+      <view class="pricing-summary">
+        <text>预计总价</text>
+        <text class="summary-price">¥{{totalPrice}}</text>
+      </view>
+      <button class="submit-btn" formType="submit" type="primary" disabled="{{!form.company_name || isSubmitting}}" loading="{{isSubmitting}}">创建订单</button>
+    </form>
+  </view>
+
+  <view class="section card" wx:if="{{orderSummary.order_id}}">
+    <view class="section-title">最新订单</view>
+    <view class="order-line">订单号：{{orderSummary.order_id}}</view>
+    <view class="order-line">状态：{{orderSummary.status}}</view>
+    <view class="order-line">金额：¥{{orderSummary.total_cny}}</view>
+    <view class="order-breakdown">
+      <view wx:for="{{orderSummary.breakdown}}" wx:key="label" class="order-breakdown-item">
+        <text>{{item.label}}</text>
+        <text>¥{{item.amount_cny}}</text>
+      </view>
+    </view>
+    <button class="ghost-btn" bindtap="goToOrder">查看详情</button>
+  </view>
+</view>

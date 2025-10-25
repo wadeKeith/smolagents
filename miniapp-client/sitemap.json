@@ -1,0 +1,9 @@
+{
+  "desc": "sitemap for enterprise background check mini program",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

@@ -167,3 +167,32 @@ python scripts/curation_monitor.py --window-hours 24
 - 提交 PR 之前建议运行 `python -m compileall run.py scripts/*.py`，确保语法无误。
 
 祝调查顺利，善用 Playbook 和监控工具！ ✨
+
+---
+
+### 9. 微信小程序接入（WeChat Mini Program）
+
+- 新增 `wechat_miniapp.py`（FastAPI）作为微信小程序的后端，复用 agent pipeline 并内置计费策略。
+- 依赖：`fastapi`、`uvicorn[standard]`，已经写入 `requirements.txt`。
+- 环境变量：
+  - `WECHAT_APPID` / `WECHAT_SECRET`：调用 `jscode2session` 所需。
+  - `WECHAT_SESSION_URL`（可选）：自定义微信接口地址。
+  - `WECHAT_TEST_MODE=true`：本地调试时跳过微信 API，按 code 生成伪 openid。
+- 启动：
+  ```bash
+  uvicorn wechat_miniapp:app --host 0.0.0.0 --port 8080
+  ```
+- 关键接口：
+  | Method | Path | 说明 |
+  | --- | --- | --- |
+  | `GET` | `/wechat/pricing` | 返回套餐与附加项，用于前端渲染价格卡片。 |
+  | `POST` | `/wechat/login` | 代理 `wx.login` code → openid。测试模式下本地生成。 |
+  | `POST` | `/wechat/orders` | 创建背调订单，校验套餐/附加项并异步触发 agent。 |
+  | `GET` | `/wechat/orders/{order_id}` | 轮询订单状态，返回 prompt/answer/error。 |
+- 计费策略：
+  - 标准版 ¥99：24 个月公开信息 + Playbook 快照。
+  - 深度版 ¥199：多轮主题分析 + 归档与 RAG 导出。
+  - 专业版 ¥299：定制检索关键词、批量导出、API 回调。
+  - 附加项：Playbook 归档导出 +¥20；自定义时效（12/36 个月）+¥30；人工复核 +¥100。
+
+微信小程序端只需按上述接口提交公司信息、套餐及附加项选择，即可获取实时价格与订单状态。

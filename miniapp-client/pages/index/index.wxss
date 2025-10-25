@@ -1,0 +1,172 @@
+.page {
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.hero-title {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.hero-desc {
+  margin-top: 12rpx;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.hero-base {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: #10b981;
+}
+
+.section {
+  margin-top: 32rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 24rpx;
+}
+
+.plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.plan-item {
+  border: 2rpx solid transparent;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  background: #f9fafb;
+}
+
+.plan-item.active {
+  border-color: #2563eb;
+  box-shadow: 0 12rpx 28rpx rgba(37, 99, 235, 0.16);
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.plan-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.plan-price {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.plan-tagline {
+  margin-top: 8rpx;
+  color: #4b5563;
+}
+
+.plan-feature {
+  display: block;
+  margin-top: 6rpx;
+  color: #6b7280;
+}
+
+.addon-item {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+  padding: 16rpx 0;
+}
+
+.addon-desc {
+  flex: 1;
+}
+
+.addon-name {
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.addon-text {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.form-item {
+  margin-bottom: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.form-row {
+  display: flex;
+  gap: 24rpx;
+}
+
+.form-item.half {
+  flex: 1;
+}
+
+.form-item input {
+  padding: 18rpx 24rpx;
+  border-radius: 20rpx;
+  background: #f3f4f6;
+}
+
+.picker-value {
+  padding: 18rpx 24rpx;
+  border-radius: 20rpx;
+  background: #f3f4f6;
+}
+
+.pricing-summary {
+  margin-top: 12rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-price {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.submit-btn {
+  margin-top: 32rpx;
+  border-radius: 50rpx;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff;
+  border: none;
+}
+
+.ghost-btn {
+  margin-top: 24rpx;
+  border: 2rpx solid #2563eb;
+  border-radius: 999rpx;
+  color: #2563eb;
+  background: transparent;
+}
+
+.order-breakdown {
+  margin-top: 16rpx;
+  border-top: 1rpx solid #e5e7eb;
+}
+
+.order-breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  color: #4b5563;
+}
+
+.addon-empty {
+  color: #9ca3af;
+  font-size: 24rpx;
+}
