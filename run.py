@@ -49,11 +49,11 @@ company_template = """
 """
 
 DEFAULT_COMPANY_VARIABLES: dict[str, Any] = {
-    "company_name": "韶关得利包装科技有限公司",
+    "company_name": "华为技术有限公司",
     "jurisdiction_hint": "CN",
-    "time_window_months": 24,
+    "time_window_months": 64,
     "report_language": "中文",
-    "company_site": "韶关市",
+    "company_site": "深圳市",
 }
 
 

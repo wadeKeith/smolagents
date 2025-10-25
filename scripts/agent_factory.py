@@ -4,6 +4,7 @@ import os
 from typing import Any
 
 from scripts.company_rag_store import CompanyRAGStore
+from scripts.curation_monitor import log_curation_event
 from scripts.rag_curator import RAGCurator
 from scripts.rag_tools import CompanyRAGIngestTool, CompanyRAGRetrieveTool
 from scripts.text_inspector_tool import TextInspectorTool
@@ -134,7 +135,7 @@ def create_agent(
         query_hint = text[:400]
         existing_chunks = rag_store.query(company_name=company_name, query=query_hint, top_k=3)
         existing_context = "\n\n".join(chunk["content"] for chunk in existing_chunks if chunk.get("content"))
-        return rag_curator.curate(
+        curated = rag_curator.curate(
             company_name=company_name,
             location_hint=resolve_location_hint(),
             source=source,
@@ -142,6 +143,16 @@ def create_agent(
             new_text=text,
             existing_context=existing_context,
         )
+        if curated:
+            log_curation_event(
+                company_name=company_name,
+                location_hint=resolve_location_hint(),
+                source=source,
+                category=category,
+                input_chars=len(text),
+                output_chars=len(curated),
+            )
+        return curated
 
     def ingest_text_if_possible(content: str, source: str, category: str) -> None:
         curated = curate_for_rag(content, source, category)
